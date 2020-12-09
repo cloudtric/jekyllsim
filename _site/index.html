@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="en-us">
+
+  <head>
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  <title>
+    
+      Cloud Hacks &middot; A cloud centric blog to share ideas, concepts and code
+    
+  </title>
+
+  
+  <link rel="canonical" href="http://localhost:4000/">
+  
+
+  <link rel="stylesheet" href="http://localhost:4000/public/css/poole.css">
+  <link rel="stylesheet" href="http://localhost:4000/public/css/syntax.css">
+  <link rel="stylesheet" href="http://localhost:4000/public/css/lanyon.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=PT+Serif:400,400italic,700%7CPT+Sans:400">
+
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="http://localhost:4000/public/apple-touch-icon-precomposed.png">
+  <link rel="shortcut icon" href="http://localhost:4000/public/favicon.ico">
+
+  <link rel="alternate" type="application/rss+xml" title="RSS" href="http://localhost:4000/atom.xml">
+
+  
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JD8T69VZ7Z"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-JD8T69VZ7Z');
+</script>
+  
+</head>
+
+
+  <body>
+
+    <!-- Target for toggling the sidebar `.sidebar-checkbox` is for regular
+     styles, `#sidebar-checkbox` for behavior. -->
+<input type="checkbox" class="sidebar-checkbox" id="sidebar-checkbox">
+
+<!-- Toggleable sidebar -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-item">
+    <p></p>
+  </div>
+
+  <nav class="sidebar-nav">
+    <a class="sidebar-nav-item active" href="http://localhost:4000/">Home</a>
+
+    
+
+    
+    
+      
+        
+      
+    
+      
+        
+      
+    
+      
+        
+          <a class="sidebar-nav-item" href="http://localhost:4000/about/">About</a>
+        
+      
+    
+      
+    
+      
+        
+          <a class="sidebar-nav-item" href="http://localhost:4000/categories/">Categories</a>
+        
+      
+    
+
+    <a class="sidebar-nav-item" href="/archive/v1.1.0.zip">Download</a>
+    <a class="sidebar-nav-item" href="">GitHub project</a>
+    <span class="sidebar-nav-item">Currently v1.1.0</span>
+  </nav>
+
+  <div class="sidebar-item">
+    <p>
+      &copy; 2020. All rights reserved.
+    </p>
+  </div>
+</div>
+
+
+    <!-- Wrap is the content to shift when toggling the sidebar. We wrap the
+         content to avoid any CSS collisions with our real content. -->
+    <div class="wrap">
+      <div class="masthead">
+        <div class="container">
+          <h3 class="masthead-title">
+            <a href="/" title="Home">Cloud Hacks</a>
+            <small>A cloud centric blog to share ideas, concepts and code</small>
+          </h3>
+        </div>
+      </div>
+
+      <div class="container content">
+        <div class="posts">
+  
+  <div class="post">
+    <h1 class="post-title">
+      <a href="http://localhost:4000/openshift/2020/12/08/Install-OCP-on-baremetal/">
+        Install OCP on IBM Cloud Baremetal (UPI)
+      </a>
+    </h1>
+
+    <span class="post-date">08 Dec 2020</span>
+    <h4><a href="/openshift/2020/12/08/Install-OCP-on-baremetal/">OpenShift</a></h4>
+    
+    <h1 id="install-ocp-456-on-ibm-cloud-baremetal-servers-upi">Install OCP 4.5.6 on IBM Cloud Baremetal Servers (UPI)</h1>
+
+<h2 id="introduction">Introduction</h2>
+<p>Detailed step by step instructions for RH OCP on IBM Cloud Baremetal Servers.
+No hypervisor is used in this setup.</p>
+
+<h2 id="high-level-steps">High Level Steps</h2>
+<ul>
+  <li>Setup Helper Node to run all the required tools. This can be Virtual Server.</li>
+  <li>Setup Cloud Services (Load Balancer,Domain, VPN, vlan etc )</li>
+  <li>Setup Baremetal Servers for OpenShift</li>
+  <li>Install OpenShift 4.5.6</li>
+  <li>Installation Validation</li>
+  <li>Access the console</li>
+</ul>
+
+<h2 id="preparation">Preparation</h2>
+<p><strong>Domain Name</strong></p>
+
+<p>Make sure you decide on domain name for your cluster.
+In this document, I have chosen <strong>ibmgsi.com</strong>.
+It is good to have this domain name registered and you have control on update the DNS records. Though it is not mandatory. If you don’t own the domain, then you may need to update clients /etc/hosts to point routes to LB external IP. In my case, I own the domain, and I would be able to access load balancers from any client. (For more details, check the Step # 3,Load Balancer configuration).</p>
+
+<p><strong>Cluster Name</strong></p>
+
+<p>In this case its <strong>mycluster</strong>.</p>
+
+<p>Baremetal servers would have following hostnames.</p>
+<ul>
+  <li>baremetal.mycluster.ibmgsi.com (Bootstrap Node)</li>
+  <li>baremetal2.mycluster.ibmgsi.com (Master Node)</li>
+  <li>baremetal3.mycluster.ibmgsi.com (Master Node)</li>
+  <li>baremetal4.mycluster.ibmgsi.com (Master Node)</li>
+  <li>baremetal5.mycluster.ibmgsi.com (Worker Node)</li>
+  <li>baremetal6.mycluster.ibmgsi.com (Worker Node)</li>
+  <li>baremetal7.mycluster.ibmgsi.com (Worker Node)</li>
+</ul>
+
+<hr />
+
+<h2 id="step-1-setup-the-helper-node">Step 1 Setup the Helper Node</h2>
+
+<h3 id="get-ssh-key">Get ssh key</h3>
+<p>From local mac machine, run following commands.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mkdir /root/cloudkey
+cd /root/cloudkey
+ssh-keygen
+Enter file in which to save the key (/Users/vishal/.ssh/id_rsa): ./id_rsa
+No need to provide passphrase. Enter Twice.
+
+</code></pre></div></div>
+
+<h3 id="create-a-vlan-in-your-dc-say-dallas13-in-this-case">Create a VLAN in your DC (Say Dallas13 in this case)</h3>
+<p>Create a new private vlan, using Catalog -&gt; services -&gt; VLANs -&gt; Create. 
+Select you data center (example Dallas13), name (example OCP45BMVLAN) -&gt; create.</p>
+
+<p>Please make sure all servers use this VLAN</p>
+
+<p>Also please note down the CIDR, on the new VLAN page.</p>
+
+<p><img src="/assets/images/subnet.png" alt="subnet" /></p>
+
+<h3 id="provision-virtual-server-instance-as-helper-node">Provision Virtual Server Instance as helper Node</h3>
+<ul>
+  <li>Select Catalog -&gt; Services -&gt; Compute -&gt; Virtual Server for Classic</li>
+  <li>Select public (Multi Tenant), bastion as name, Dal13 DC, 2 CPU, 4GB</li>
+  <li>Select ssh key, generated above, Cent OS, 100GB Boot Disk</li>
+  <li>Make sure you select private vlan as ‘OCP45BMVLAN’.</li>
+</ul>
+
+<p>Create the VSI Instance
+<em>Please Note: In my environment, the internal IP of VSI instance is 10.209.85.195</em></p>
+
+<h3 id="add-ssh-key-in-your-mac-machine-for-quick-login">Add ssh key in your mac machine for quick login</h3>
+<ul>
+  <li>From client (Mac), use ssh-add <private-key></private-key></li>
+  <li>Edit /etc/hosts (Map public IP of VSI = ocphelper)</li>
+  <li>Create ~/.ssh/config file and add something like this :
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Host ocphelper
+      HostName ocphelper
+      IdentityFile ~/cloudkey/id_rsa
+      User root
+</code></pre></div>    </div>
+    <p>Now “ssh ocphelper” should work without password.</p>
+  </li>
+</ul>
+
+<h3 id="setup-nat-router-for-helper-node">Setup NAT router for Helper Node</h3>
+<ul>
+  <li>Establish the names of public and private interfaces with ip addr, we will assume eth1 is public and eth0 is private.</li>
+  <li>Run sysctl -w net.ipv4.ip_forward=1 to enable IP forwarding</li>
+  <li>Add the line net.ipv4.ip_forward = 1 to the file /etc/sysctl.conf to keep it enabled across reboots.</li>
+  <li>systemctl start firewalld</li>
+  <li><code class="language-plaintext highlighter-rouge">firewall-cmd –permanent –direct –passthrough ipv4 -t nat -I POSTROUTING -o eth1 -j MASQUERADE -s XXX</code> where XXX is your subnet CIDR e.g. 10.209.85.192/26</li>
+  <li><code class="language-plaintext highlighter-rouge">systemctl enable firewalld</code></li>
+</ul>
+
+<h3 id="setup-firewall-on-helper-node">Setup Firewall on Helper Node</h3>
+<ul>
+  <li>Identify your public and private interfaces. On an IBM Cloud VSI the public interface should be eth1 and the private eth0.</li>
+  <li>Add the private interface to the ‘internal’ group firewall-cmd –permanent –zone=internal –change-interface=eth0</li>
+  <li>Add the public interface to the ‘external’ group firewall-cmd –permanent –zone=external –change-interface=eth1</li>
+  <li>Add the SMB service to the internal zone firewall-cmd –permanent –zone=internal –add-service=samba</li>
+  <li>Add HTTP to the internal zone firewall-cmd –permanent –zone=internal –add-service=http</li>
+  <li>Add DNS to the internal zone firewall-cmd –permanent –zone=internal –add-service=dns</li>
+  <li>Start or restart the firewall <code class="language-plaintext highlighter-rouge">systemctl start firewalld</code> or <code class="language-plaintext highlighter-rouge">systemctl restart firewalld</code></li>
+  <li>Enable the firewall permanently <code class="language-plaintext highlighter-rouge">systemctl enable firewalld</code></li>
+</ul>
+
+<h3 id="configure-cluster-dns-service-on-helper-node">Configure Cluster DNS Service on Helper Node</h3>
+
+<p>Use BIND set up on the VSI.</p>
+<ol>
+  <li>Install bind on Helper Node <code>yum install bind bind-utils</code></li>
+  <li>Edit /etc/named.conf and create an access control list by adding the following to the top of the file, where XXX is your private subnet CIDR:
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>acl openshift {
+     XXX;
+};
+</code></pre></div>    </div>
+  </li>
+  <li>In the options section, add or change the following lines:
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>listen-on port 53 { 10.209.85.195; };
+allow-query     { localhost; openshift; };
+</code></pre></div>    </div>
+  </li>
+  <li>At the end of the file add the following for the forward zone:
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>zone "mycluster.ibmgsi.com" IN {
+ type master;
+ file "mycluster.ibmgsi.com.db";
+ allow-update { none; };
+};
+</code></pre></div>    </div>
+  </li>
+  <li>Reverse zones are named with the significant IP octets in reverse, so if your subnet is 10.1.2.x then the zone shoudl be 2.1.10.in-addr-arpa
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>zone "85.209.10.in-addr.arpa" IN {
+  type master;
+  file "85.209.10.db";
+  allow-update { none; };
+};
+</code></pre></div>    </div>
+  </li>
+</ol>
+
+<p>Check out the file from my working environment: <a href="/files/named.conf">named.conf</a></p>
+
+<ol>
+  <li>Create the zone file in for the forward zone in /var/named called mycluster.mydomain.com.db with the following content including your own values. Note that IBM Cloud load balancers have multiple redundant IP addresses, so two records are included.</li>
+</ol>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>@ IN SOA ns1.softlayer.com. root.mycluster.mydomain.com. (
+                       2020030800        ; Serial
+                       7200              ; Refresh
+                       600               ; Retry
+                       1728000           ; Expire
+                       3600)             ; Minimum
+
+@                      86400    IN NS    ns1.softlayer.com.
+@                      86400    IN NS    ns2.softlayer.com.
+
+*.apps                 900      IN A     &lt;internal proxy LB address 1&gt;
+*.apps                 900      IN A     &lt;internal proxy LB address 2&gt;
+api                    900      IN A     &lt;internal API LB address 1&gt;
+api                    900      IN A     &lt;internal API LB address 2&gt;
+api-int                900      IN A     &lt;internal API LB address 1&gt;
+api-int                900      IN A     &lt;internal API LB address 2&gt;
+etcd-0                 900      IN A     &lt;master 1 address&gt;
+etcd-1                 900      IN A     &lt;master 2 address&gt;
+etcd-2                 900      IN A     &lt;master 3 address&gt;
+&lt;bootstrap name&gt;       900      IN A     &lt;bootstrap address&gt;
+&lt;master 1 name&gt;        900      IN A     &lt;master 1 address&gt;
+&lt;master 2 name&gt;        900      IN A     &lt;master 2 address&gt;
+&lt;master 3 name&gt;        900      IN A     &lt;master 3 address&gt;
+&lt;worker 1 name&gt;        900      IN A     &lt;worker 1 address&gt;
+&lt;worker 2 name&gt;        900      IN A     &lt;worker 2 address&gt;
+&lt;worker 3 name&gt;        900      IN A     &lt;worker 3 address&gt;
+&lt;VSI name&gt;             900      IN A     &lt;VSI IP&gt;
+_etcd-server-ssl._tcp  900      IN SRV   0 10 2380 etcd-0
+_etcd-server-ssl._tcp  900      IN SRV   0 10 2380 etcd-1
+_etcd-server-ssl._tcp  900      IN SRV   0 10 2380 etcd-2
+</code></pre></div></div>
+
+<p>Checkout working file from my environment: <a href="/files/mycluster.ibmgsi.com.db">mycluster.ibmgsi.com.db</a></p>
+
+<ol>
+  <li>Then create a reverse file matching the reverse zone definition above e.g. 2.1.10.db:</li>
+</ol>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$TTL 86400
+@ IN SOA ns1.softlayer.com. root.mycluster.mydomain.com. (
+                       2020030722        ; Serial
+                       7200              ; Refresh
+                       600               ; Retry
+                       1728000           ; Expire
+                       3600)             ; Minimum
+
+@                      86400    IN NS    ns1.softlayer.com.
+@                      86400    IN NS    ns2.softlayer.com.
+
+&lt;bootstrap last octet&gt;  IN PTR &lt;bootstrap name&gt;.;
+&lt;master 1 last octet&gt;   IN PTR &lt;master 1 name&gt;.;
+&lt;master 2 past octet&gt;   IN PTR &lt;master 2 name&gt;.;
+&lt;master 3 last octet&gt;   IN PTR &lt;master 3 name&gt;.;
+&lt;worker 1 last octet&gt;   IN PTR &lt;worker 1 name&gt;.;
+&lt;worker 2 last octet&gt;   IN PTR &lt;worker 2 name&gt;.;
+&lt;worker 3 last octet&gt;   IN PTR &lt;worker 3 name&gt;.;
+</code></pre></div></div>
+
+<p>Checkout working file from my environment: <a href="/files/85.209.10.db">85.209.10.db</a></p>
+
+<p>Restart the DNS service with <code> systemctl named restart </code></p>
+
+<ol>
+  <li>Make sure you update the DNS Settings. Edit /etc/resolv.conf and add following lines</li>
+</ol>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>nameserver  10.209.85.195  # ns1 private IP address
+nameserver 10.0.80.11
+</code></pre></div></div>
+<p>Use Helper Node Private IP as nameserver.
+Test name resolution from your local server.</p>
+
+<hr />
+
+<h2 id="step-2-provision-7-baremetal-servers">Step 2 Provision 7 Baremetal servers.</h2>
+
+<p>Use following process:</p>
+
+<ul>
+  <li>Click on Catalog, Left navigation compute -&gt; Bare Metal Servers</li>
+  <li>Select the servers, as mentioned in the screenshots</li>
+  <li>7 Numbers of servers, baremetal as name, mycluster.ibmgsi.com as domain name.</li>
+  <li>
+    <p>Follow screenshots for more details</p>
+  </li>
+  <li>
+    <p><img src="/assets/images/bm1.png" alt="Order Device" /></p>
+  </li>
+  <li>
+    <p><img src="/assets/images/bm2.png" alt="Order Device2" /></p>
+  </li>
+  <li>
+    <p><img src="/assets/images/bm3.png" alt="Order Device3" /></p>
+  </li>
+  <li>Select correct data center, vlan, ssh key, “No OS” option, etc.</li>
+  <li>
+    <h2 id="accept-license-and-provision-bare-metals">Accept License and provision bare metals.</h2>
+  </li>
+</ul>
+
+<h2 id="step-3-configure-load-balancers-and-domain">Step 3 Configure Load balancers and Domain</h2>
+
+<p>Openshift requires load balancers for bootstrap related traffic, for control plane traffic, and for ingress traffic i.e. access to the user applications.  This guide uses the IBM local load balancer service and will create four instances:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Servers</th>
+      <th>Ports</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Internal Proxy</td>
+      <td>Private to private</td>
+      <td>Workers</td>
+      <td>80, 443</td>
+    </tr>
+    <tr>
+      <td>External Proxy</td>
+      <td>Public to private</td>
+      <td>Workers</td>
+      <td>80, 443</td>
+    </tr>
+    <tr>
+      <td>Internal API</td>
+      <td>Private to private</td>
+      <td>Bootstrap, masters</td>
+      <td>6443, 22623*</td>
+    </tr>
+    <tr>
+      <td>External API</td>
+      <td>Public to private</td>
+      <td>Bootstrap, workers</td>
+      <td>6443</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>* This rule should be removed after installation is complete along with the bootstrap server.</p>
+
+<p>Go to Catalog -&gt; Left Navigation -&gt; Classic Infrastructure -&gt; Load Balancing
+Create these four entries:</p>
+
+<p><img src="/assets/images/lb3.png" alt="Load Balancer" /></p>
+
+<p>Please make sure you use TCP as a protocol for LBs.</p>
+
+<p><img src="/assets/images/lb2.png" alt="Load Balancer" /></p>
+
+<h3 id="accessing-load-balancers-externally">Accessing Load Balancers Externally</h3>
+<p>We also need to make sure, domain names are updated with the external IP address of LB.</p>
+
+<p>Create the following A records in your zone, assuming your cluster name will be mycluster and your domain is ibmgsi.com:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>IP</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>api.mycluster.ibmgsi.com</td>
+      <td>IP of external API load balancer</td>
+    </tr>
+    <tr>
+      <td>*.apps.mycluster.ibmgsi.com</td>
+      <td>IP of external proxy load balancer</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h2 id="step-4-setup-smb-server-on-helper-node">Step 4 Setup SMB Server on Helper Node</h2>
+
+<p>The VSI needs to host an SMB share to allow the bare metal server management system to mount it. It is also possible to mount ISOs from your local workstation, but it is less convenient in most cases as it requires extra software to be installed.</p>
+
+<p>To set up SMB on the VSI:</p>
+
+<ul>
+  <li>Install the packages with <code class="language-plaintext highlighter-rouge">yum install samba samba-client samba-common</code></li>
+  <li>Create a group for SMB users <code class="language-plaintext highlighter-rouge">groupadd smbgrp</code></li>
+  <li>Create an SMB user called e.g. coreos with the command <code class="language-plaintext highlighter-rouge">useradd coreos -G smbgrp</code></li>
+  <li>Set an SMB password for the user with <code class="language-plaintext highlighter-rouge">smbpasswd -a coreos</code></li>
+  <li>Create a folder to hold the shared files e.g. <code class="language-plaintext highlighter-rouge">/share/coreos</code></li>
+  <li>Change the permissions of the shared folder: <code class="language-plaintext highlighter-rouge">chmod 777 /share/coreos</code></li>
+  <li>Add the following to /etc/samba/smb.conf:</li>
+</ul>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[coreos]
+	path = /share/coreos
+	valid users = @smbgrp
+	guest ok = no
+	writable = yes
+	browsable = no
+</code></pre></div></div>
+<ul>
+  <li>Under the <code class="language-plaintext highlighter-rouge">[global]</code> section in smb.conf, add the line <code class="language-plaintext highlighter-rouge">ntlm auth = yes</code>.  This is an insecure protocol, but it is required because the IPMI console will try to use it when it mounts the ISO as a virtual DVD.</li>
+  <li>Start the SMB services with <code class="language-plaintext highlighter-rouge">systemctl start smb.service</code> and <code class="language-plaintext highlighter-rouge">systemctl start nmb.service</code></li>
+  <li>Enable the services to start on boot with <code class="language-plaintext highlighter-rouge">systemctl enable smb.service</code> and <code class="language-plaintext highlighter-rouge">systemctl enable nmb.service</code></li>
+</ul>
+
+<hr />
+
+<h2 id="step-5-setup-http-servers-on-helper-node">Step 5 Setup HTTP Servers on Helper Node</h2>
+<p>This is required to allow the nodes to access their configuration files when they are installing.</p>
+<ul>
+  <li>On the VSI, install apache <code class="language-plaintext highlighter-rouge">yum install httpd</code></li>
+  <li>Start the server ‘systemctl start httpd’</li>
+  <li>Enable the service permanently <code class="language-plaintext highlighter-rouge">systemctl enable httpd</code></li>
+</ul>
+
+<hr />
+
+<h2 id="step-6-setup-docker-on-helper-node">Step 6 Setup Docker on Helper Node</h2>
+<p>Docker is not specifically required for the installation process, however these instructions use a utility called filetranspiler which is written in Python, and distributed as both Python source and a container image.  In the spirit of the modern containerised world it was decided to use the container version which will be described here.  However those familiar with Python may wish to use the source directly.  Consult the github repo at https://github.com/ashcrow/filetranspiler for instructions on using Python directly.  We will proceed with docker here.</p>
+
+<ul>
+  <li>Install docker with <code class="language-plaintext highlighter-rouge">yum install docker</code></li>
+  <li>Start docker with <code class="language-plaintext highlighter-rouge">systemctl start docker</code></li>
+  <li>Enable docker on restart with <code class="language-plaintext highlighter-rouge">systemctl enable docker</code></li>
+</ul>
+
+<hr />
+
+<h2 id="step-7-obtaining-the-installation-files">Step 7 Obtaining the installation files</h2>
+<p>Openshift 4.x uses Red Hat Core OS.  To install CoreOS on a machine, the machine must boot from an ISO with configuration parameters suppled to a GRUB-like bootloader.  The ISO will then download an ignition file and an OS image which it will will write to the disk.  The ignition file contains configuration for the server.  When the machine is rebooted CoreOS will boot and join the cluster as specified in the ignition file.</p>
+
+<p>There are two version of the OS disk image - one for BIOS and one for UEFI.  These instructions will use the BIOS version but the process should be the same for UEFI.</p>
+
+<p>The ignition files are created by a utility called <code class="language-plaintext highlighter-rouge">openshift-install</code> which along with the ISO and the OS images is downloadable from Red Hat.</p>
+
+<p>These instructions will conduct the installation from the VSI although it is possible to do this from a local workstation if desired, however the VPN must be correctly configured to allow this.</p>
+
+<p>Visit https://cloud.redhat.com/openshift/install/metal/user-provisioned to download the following:</p>
+<ul>
+  <li>The Openshift installer (Linux version)</li>
+  <li>Your pull secret</li>
+  <li>The Openshift command line tool (oc) (Linux version)</li>
+</ul>
+
+<p>Run all these files and make sure its installed on Helper Node.</p>
+
+<p>From the same page, click on the Download RHCOS link to get to the download archive.  From this page, download the following, where <version> is the appropriate version:</version></p>
+<ul>
+  <li>rhcos-<version>-x86_64-installer.x86_64.iso</version></li>
+  <li>rhcos-<version>-x86_64-metal.x86_64.raw.gz</version></li>
+</ul>
+
+<p>Place the files in the appropriate locations</p>
+<ul>
+  <li>Copy the installer ISO <code class="language-plaintext highlighter-rouge">rhcos-&lt;version&gt;-x86_64-installer.x86_64.iso</code> to the SMB share e.g. <code class="language-plaintext highlighter-rouge">/share/coreos</code></li>
+  <li>Copy the disc image <code class="language-plaintext highlighter-rouge">rhcos-&lt;version&gt;-x86_64-metal.x86_64.raw.gz</code> to the HTML server directory <code class="language-plaintext highlighter-rouge">/var/www/html</code></li>
+</ul>
+
+<p>In my installation, I have used OpenShift 4.5.6. 
+Files :</p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">rhcos-4.5.6-x86_64-installer.x86_64.iso</code></li>
+  <li><code class="language-plaintext highlighter-rouge">rhcos-4.5.6-x86_64-metal.x86_64.raw.gz</code></li>
+</ul>
+
+<hr />
+
+<h2 id="step-8-configure-vpn-connectivity-from-your-local-mac-machine">Step 8 Configure VPN Connectivity from your local mac machine</h2>
+
+<p>The web-based IPMI console for managing the bare metal servers is available via a management IP address which is on the same subnet as the servers themselves.  To access this from your local workstation a VPN connection is required.</p>
+
+<h3 id="configure-vpn-for-your-subnet">Configure VPN for your subnet</h3>
+<ul>
+  <li>Click on Catalog -&gt; Classic Infrastructure -&gt; Network -&gt; IPSec VPN.</li>
+  <li>In the top right, click ‘Order VPN’, and select your data center from the list.</li>
+  <li>Once the VPN is available, click on its name in the list.  On the following configuration page it is not necessary to enter anything in the Remote Peer Address field.</li>
+  <li>The Customer Subnets list is a white-list of the IPs from which connection is allowed.  Enter a suitable CIDR.</li>
+  <li>The Hosted Private Subnets section is a list of the subnets to which this VPN will allow access.  Click on ‘Add Hosted Private Subnet’, then in the dialog box find the subnet on which your servers are and click the Add link.</li>
+  <li>In my setup its <code class="language-plaintext highlighter-rouge">10.209.85.192/26</code>.</li>
+  <li>Click on Update Device in the bottom right.</li>
+</ul>
+
+<h3 id="get-credentials-for-vpn">Get Credentials for VPN</h3>
+<p>Now the endpoint is configured, a username and password will be required to connect.  VPN access is granted to users via the access management page.</p>
+
+<ul>
+  <li>At the top of the screen click on the Manage drop-down and select Access (IAM).  On the next screen click on Users.</li>
+  <li>Select your user from the list.</li>
+  <li>On the user details page, scroll down to VPN password and enter a password.</li>
+  <li>By default you have access to all subnets on which the devices to which you have access are situated.  The account owner has access to all the devices.</li>
+</ul>
+
+<p>To connect to the VPN, an IPSec VPN client is required such as <strong>MotionPro</strong> which is a free download.  The software requires an endpoint address, a username and password.</p>
+
+<ul>
+  <li>To find your endpoint address, go to https://cloud.ibm.com/docs/iaas-vpn?topic=iaas-vpn-available-vpn-endpoints and select the appropriate endpoint for your data centre.</li>
+  <li>The username and password are those configured in the IAM screen earlier in this section.</li>
+</ul>
+
+<p>In my case, where my vlan is on Dallas13, I should use ‘vpn.dal.softlayer.com’</p>
+
+<hr />
+
+<h2 id="step-9-configuring-installation">Step 9 Configuring installation</h2>
+<p>Create a file called install-config.yaml, and add the following content, substituting the appropriate values.  Set the number of worker nodes in this file to zero even though we are adding worker nodes later.  Make sure that the cidr of the cluster network does NOT overlap with the subnet of your bare metal machines.  The service network can be left as it is.  The SSH key is the public part of the one created in step 1.</p>
+
+<p>Here is example of my environment install-config.yaml</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>apiVersion: v1
+baseDomain: ibmgsi.com
+compute:
+- hyperthreading: Enabled
+  name: worker
+  replicas: 0
+controlPlane:
+  hyperthreading: Enabled
+  name: master
+  replicas: 3
+metadata:
+  name: mycluster
+networking:
+  clusterNetwork:
+  - cidr: 10.128.0.0/16
+    hostPrefix: 26
+  networkType: OpenShiftSDN
+  serviceNetwork:
+  - 172.30.0.0/16
+platform:
+  none: {}
+pullSecret: 'xxx'
+sshKey: 'ssh-rsa yyy'
+
+</code></pre></div></div>
+<ul>
+  <li>xxx = Use pullSecret from previous step.</li>
+  <li>yyy = Use ssh key which we created at the beginning of this document, its public part.</li>
+</ul>
+
+<p><em>Please note that CIDR in above file shouldn’t clash with existing CIDR. Hence we have choose to use 10.128.0.0/16. If you use /8, there would be a problem</em></p>
+
+<ul>
+  <li>Create an install directory e.g. <code class="language-plaintext highlighter-rouge">install01</code>.  This is the working directory for the openshift installer.  <strong>Make a copy</strong> of install-config.yaml and place it in this directory.</li>
+  <li>Create manifests <code class="language-plaintext highlighter-rouge">openshift-install create manifests --dir=install01</code>.  Ignore the warning about no compute nodes.</li>
+  <li>Edit <code class="language-plaintext highlighter-rouge">install01/manifests/cluster-scheduler-02-config.yml</code> and change the parameter <code class="language-plaintext highlighter-rouge">mastersSchedulable</code> to <code class="language-plaintext highlighter-rouge">false</code>.</li>
+  <li>Create ignition config files with <code class="language-plaintext highlighter-rouge">openshift-install create ignition-configs --dir=install01</code></li>
+</ul>
+
+<p>This will create bootstrap, master and worker ignition files that are suitable for use with DHCP.  However this cluster must use static IPs, so each node must have its own ignition file with that static IP written into it.  The static IP must be the same IP as assigned to the server by IBM Cloud.</p>
+
+<p>Ignition files are not human readable, so it is best to use a utility for this.  As mentioned above, these instructions will use filetranspiler available from https://github.com/ashcrow/filetranspiler - but other tools may be available.  Filetranspiler works by taking files from a ‘fakeroot’ directory and including them into the ignition file.</p>
+
+<ul>
+  <li>Make a directory e.g. <code class="language-plaintext highlighter-rouge">filetranspiler</code> and change to it.</li>
+  <li><code class="language-plaintext highlighter-rouge">git clone https://github.com/ashcrow/filetranspiler</code></li>
+  <li>Build the docker image <code class="language-plaintext highlighter-rouge">docker build . -t filetranspiler:latest</code></li>
+  <li>Make another directory to contain the fake roots e.g. <code class="language-plaintext highlighter-rouge">fakeroots</code></li>
+</ul>
+
+<p>The following tasks are repetitive and may be scripted, and a script to help is available in this repository at http://XXXX.  The steps in the script will be described below.  For <em>each machine</em> i.e. bootstrap, three masters and three workers, do the following steps:</p>
+
+<ul>
+  <li>Create a standard interface configuration file for the static network in the  fakeroot directory
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cat &gt; fakeroots/&lt;machine name&gt;/etc/sysconfig/network-scripts/ifcfg-eno1 &lt;&lt; EOF
+DEVICE=eno1
+BOOTPROTO=static
+ONBOOT=yes
+IPADDR=&lt;ip address&gt;
+PREFIX=&lt;subnet prefix&gt;
+NETMASK=&lt;netmask&gt;
+GATEWAY=&lt;VSI IP&gt;
+DNS1=&lt;VSI IP&gt;
+DNS2=10.0.80.11
+DOMAIN=mycluster.mydomain.com
+DEFROUTE=yes
+IPV6INIT=no
+HOSTNAME=&lt;node name&gt;.mycluster.mydomain.com
+EOF
+</code></pre></div>    </div>
+    <p>In my environment, here is one of file: <a href="/files/ifcfg-eno1">ifcfg-eno1</a> for bootstrap host.<br />
+Similarly create total 7 files.<br /></p>
+  </li>
+  <li>Run filetranspiler, substituting machine type for boostrap, master or worker:</li>
+  <li>That means create total 7 ifcg-eno1 files.
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run --rm -ti --volume `pwd`:/srv:z filetranspiler -i install01/&lt;machine type&gt;.ign -f fakeroots/ocpmaster41 -o install01/&lt;machine name&gt;.ign
+</code></pre></div>    </div>
+  </li>
+</ul>
+
+<p>In my case of installation, Here is what I ran:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run --rm -ti --volume `pwd`:/srv:z filetranspiler -i install01/bootstrap.ign -f fakeroots/baremetal -o install01/baremetal.ign
+docker run --rm -ti --volume `pwd`:/srv:z filetranspiler -i install01/master.ign -f fakeroots/baremetal2 -o install01/baremetal2.ign
+docker run --rm -ti --volume `pwd`:/srv:z filetranspiler -i install01/master.ign -f fakeroots/baremetal3 -o install01/baremetal3.ign
+docker run --rm -ti --volume `pwd`:/srv:z filetranspiler -i install01/master.ign -f fakeroots/baremetal4 -o install01/baremetal4.ign
+docker run --rm -ti --volume `pwd`:/srv:z filetranspiler -i install01/worker.ign -f fakeroots/baremetal5 -o install01/baremetal5.ign
+docker run --rm -ti --volume `pwd`:/srv:z filetranspiler -i install01/worker.ign -f fakeroots/baremetal6 -o install01/baremetal6.ign
+docker run --rm -ti --volume `pwd`:/srv:z filetranspiler -i install01/worker.ign -f fakeroots/baremetal7 -o install01/baremetal7.ign
+</code></pre></div></div>
+<p>After this there should be seven new ign files in the install01 directory.<br /></p>
+<ul>
+  <li>Copy these files to /var/www/html</li>
+</ul>
+
+<hr />
+
+<h2 id="step-10-coreos-installation-on-all-7-bare-metal-servers">Step 10 CoreOS installation on all 7 Bare Metal servers</h2>
+<p>Installing CoreOS is a two stage process. Firstly, the system boots from the ISO. At this point, basic installation parameters must be entered on the command line to enable networking. The system then downloads an ign file and an OS image from the HTTP server, writes the image to the specified disk and configures the system according to the ign file with networking and the cluster details. When the system reboots from the disk, the system will adopt the role defined in the ign file, either bootstrap, master or worker. The master and worker nodes will contact the bootstrap node which will orchestrate the assembly of the cluster.</p>
+
+<p><strong>Before you begin here, please make sure to connect the VPN via your IPsec client mentioned in step 8</strong></p>
+
+<p>For each node - bootstrap, three masters and three workers (in that order), complete the following steps:</p>
+
+<h3 id="step-101-prepare-bootstrap-server-for-coreos">Step 10.1 Prepare Bootstrap Server for CoreOS</h3>
+
+<ul>
+  <li>Go to the Classic Infrastructure page on IBM Cloud and select Devices then Device List. Select a device - starting with the bootstrap device.</li>
+  <li>Select Remote Management from the left hand menu. Under Management Details there is a password - select Show and then copy the password.</li>
+  <li>From the Actions drop-down in the top right, select KVM Console. In the resulting log in screen, enter ‘root’ for the user and paste the password. The IPMI console should appear.</li>
+</ul>
+
+<p><img src="/assets/images/bmc1.png" alt="Baremetal Management Console" /></p>
+
+<h3 id="step-102-ipmi-console-setup-cdrom-with-coreos-iso-image">Step 10.2 IPMI Console, Setup CDROM with CoreOS iso Image</h3>
+<ul>
+  <li>Under Remote Control select Power Control. Use the menu to power the server off if it is running.</li>
+  <li>Under Virtual Media, select CD-ROM image. There should be listed three devices with no disk emulation set. If not, contact support to un-mount any unwanted images.</li>
+  <li>Enter the details of the SMB share: for host, enter the VSI IP; for the path enter the share name and filename of the ISO e.g. /coreos/rhcos–x86_64-installer.x86_64.iso; enter the username and password set for the SMB user in step</li>
+</ul>
+
+<p><img src="/assets/images/bmc2.png" alt="Baremetal Management Console" /></p>
+
+<ul>
+  <li>Click Save then Mount. If the mount was successful, Device 1 in the list of devices should report that an image is mounted.</li>
+  <li>Under Remote Control at the top of the screen, select iKVM/HTML5. Then on the next screen click the iKVM/HTML5 button.</li>
+  <li>A pop-up window will appear with a menu and a blank screen.</li>
+</ul>
+
+<h3 id="step-103-ipmi-console-boot-from-cdrom-and-add-boot-options">Step 10.3 IPMI Console, boot from CDROM and add boot options.</h3>
+<ul>
+  <li>In the menu select Power Control then Set Power On.</li>
+  <li>The CoreOS installer should boot.</li>
+</ul>
+
+<p><em>Please note: In some cases, you may need to press F11 (or some other function key) key to enter to boot menu</em>
+<em>Please use on screen key board as mentioned in below image</em></p>
+
+<ul>
+  <li>
+    <p><img src="/assets/images/bmc3.png" alt="Baremetal Management Console" /></p>
+  </li>
+  <li>Hit enter for CDROM option.</li>
+  <li>You will be prompted for option of ‘Install RHEL CoreOS’</li>
+  <li>
+    <p>Use tab, to append addition parameters to the installer.</p>
+  </li>
+  <li>
+    <p><img src="/assets/images/bmc4.png" alt="Baremetal Management Console" /></p>
+  </li>
+  <li>Add following additional parameters depending on which Node is being set.</li>
+  <li>Options are:</li>
+</ul>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ip=machine IP::gateway:subnet:hostname:network adapter:none:nameserver coreos.inst.install_dev=install device coreos.inst.image_url=OS image URL coreos.inst.ignition_url=ignition file URL
+</code></pre></div></div>
+
+<p>In my environment, here are the parameters, for Bootstrap Node :</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ip=10.209.85.219::10.209.85.195:255.255.255.192:baremetal:eno1:none:10.209.85.195 coreos.inst.install_dev=sda coreos.inst.image_url=http://10.209.85.195/rhcos-4.5.2-x86_64-metal.x86_64.raw.gz coreos.inst.ignition_url=http://10.209.85.195/baremetal.ign
+</code></pre></div></div>
+<p><strong>Please note: If you hate typing such big command everytime, you can use mac ‘Script Editor’</strong>
+<strong>Look at this page for more information</strong>
+<a href="https://www.sythe.org/threads/auto-typer-script-for-mac/">How to reduce typing on IPMI Console</a></p>
+
+<h3 id="step-104-ipmi-console-complete-the-installation-and-make-sure-server-boots-with-coreos">Step 10.4 IPMI Console, complete the installation and make sure server boots with CoreOS.</h3>
+
+<p>Once the installation is complete, the server would reboot.
+During re-boot, make sure you unmount CDROM, so that server would follow normal boot sequence of CoreOS.</p>
+
+<p>At this moment, your bootstrap server has completed installation.</p>
+
+<ul>
+  <li>Monitor the bootstrap process with <code class="language-plaintext highlighter-rouge">openshift-install --dir=install01 wait-for bootstrap-complete --log-level=debug</code></li>
+</ul>
+
+<hr />
+
+<h2 id="step-11-install-coreos-on-master-and-worker-nodes">Step 11 Install CoreOS on Master and Worker Nodes.</h2>
+
+<ul>
+  <li>Follow 10.1, 10.2, 10.3 for all masters and worker nodes.</li>
+  <li>Use following parameters depending on which node you are Configuring.</li>
+  <li>For Baremetal2 which is master node</li>
+</ul>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>BAREMETAL2 =&gt; Master Node 1
+ip=10.209.85.242::10.209.85.195:255.255.255.192:baremetal2:eno1:none:10.209.85.195 coreos.inst.install_dev=sda coreos.inst.image_url=http://10.209.85.195/rhcos-4.5.2-x86_64-metal.x86_64.raw.gz coreos.inst.ignition_url=http://10.209.85.195/baremetal2.ign
+
+
+BAREMETAL3 =&gt; Master Node 2
+ip=10.209.85.202::10.209.85.195:255.255.255.192:baremetal3:eno1:none:10.209.85.195 coreos.inst.install_dev=sda coreos.inst.image_url=http://10.209.85.195/rhcos-4.5.2-x86_64-metal.x86_64.raw.gz coreos.inst.ignition_url=http://10.209.85.195/baremetal3.ign
+
+
+BAREMETAL4 =&gt; Master Node 3
+ip=10.209.85.236::10.209.85.195:255.255.255.192:baremetal4:eno1:none:10.209.85.195 coreos.inst.install_dev=sda coreos.inst.image_url=http://10.209.85.195/rhcos-4.5.2-x86_64-metal.x86_64.raw.gz coreos.inst.ignition_url=http://10.209.85.195/baremetal4.ign
+
+
+BAREMETAL5 =&gt; Worker Node 1
+ip=10.209.85.211::10.209.85.195:255.255.255.192:baremetal5:eno1:none:10.209.85.195 coreos.inst.install_dev=sda coreos.inst.image_url=http://10.209.85.195/rhcos-4.5.2-x86_64-metal.x86_64.raw.gz coreos.inst.ignition_url=http://10.209.85.195/baremetal5.ign
+
+BAREMETAL6 =&gt; Worker Node 2
+ip=10.209.85.218::10.209.85.195:255.255.255.192:baremetal6:eno1:none:10.209.85.195 coreos.inst.install_dev=sda coreos.inst.image_url=http://10.209.85.195/rhcos-4.5.2-x86_64-metal.x86_64.raw.gz coreos.inst.ignition_url=http://10.209.85.195/baremetal6.ign
+
+BAREMETAL7 =&gt; Worker Node 3
+ip=10.209.85.224::10.209.85.195:255.255.255.192:baremetal7:eno1:none:10.209.85.195 coreos.inst.install_dev=sda coreos.inst.image_url=http://10.209.85.195/rhcos-4.5.2-x86_64-metal.x86_64.raw.gz coreos.inst.ignition_url=http://10.209.85.195/baremetal7.ign
+
+</code></pre></div></div>
+
+<ul>
+  <li>Monitor the bootstrap process with <code class="language-plaintext highlighter-rouge">./openshift-install --dir=install01 wait-for install-complete --log-level=debug</code></li>
+</ul>
+
+<hr />
+
+<h2 id="step-12-validation-of-environment-and-some-of-manual-steps-to-complete-the-installation">Step 12 validation of environment and some of manual steps to complete the installation.</h2>
+
+<h3 id="connect-to-ocp-cluster-from-helper-node">Connect to OCP Cluster from Helper Node.</h3>
+
+<ul>
+  <li>On the Helper Node, change directory to install01/auth</li>
+  <li>You will find a file named ‘kubeconfig’</li>
+  <li>On command prompt. <code class="language-plaintext highlighter-rouge">export KUBECONFIG=/root/OCPInstall3/install01/auth/kubeconfig</code> (Select correct directory for kuebconfig)</li>
+  <li>Run command <code class="language-plaintext highlighter-rouge">oc get nodes</code> Check if all 6 nodes are ready or not.</li>
+  <li>Run command <code class="language-plaintext highlighter-rouge">oc get pods -A</code> Check if any issue to any pod.</li>
+  <li>Run command <code class="language-plaintext highlighter-rouge">oc get clusteroperator</code> Check if AVAILABLE is true for all operators.</li>
+</ul>
+
+<p>In my installation I got this, where many clusteroperator were showing unknowm or False.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[root@ocp-bastion OCPInstall3]# oc --kubeconfig ./install01/auth/kubeconfig get clusteroperator
+NAME                                       VERSION   AVAILABLE   PROGRESSING   DEGRADED   SINCE
+authentication                                       Unknown     Unknown       True       8h
+cloud-credential                           4.5.7     True        False         False      8h
+cluster-autoscaler                         4.5.7     True        False         False      3h52m
+config-operator                            4.5.7     True        False         False      3h52m
+console                                    4.5.7     Unknown     True          False      3h56m
+csi-snapshot-controller                                                                   
+dns                                        4.5.7     True        False         False      8h
+etcd                                       4.5.7     True        False         False      4h
+image-registry                             4.5.7     True        False         False      3h54m
+ingress                                              False       True          True       3h54m
+insights                                   4.5.7     True        False         False      3h54m
+kube-apiserver                             4.5.7     True        False         False      3h57m
+kube-controller-manager                    4.5.7     True        False         False      8h
+kube-scheduler                             4.5.7     True        False         False      8h
+kube-storage-version-migrator              4.5.7     False       False         False      8h
+machine-api                                4.5.7     True        False         False      3h54m
+machine-approver                           4.5.7     True        False         False      4h2m
+machine-config                             4.5.7     True        False         False      8h
+marketplace                                4.5.7     True        False         False      3h54m
+monitoring                                           False       True          True       3h49m
+network                                    4.5.7     True        False         False      8h
+node-tuning                                4.5.7     True        False         False      8h
+openshift-apiserver                        4.5.7     True        False         False      3h56m
+openshift-controller-manager               4.5.7     True        False         False      3h54m
+openshift-samples                          4.5.7     True        False         False      3h50m
+operator-lifecycle-manager                 4.5.7     True        False         False      8h
+operator-lifecycle-manager-catalog         4.5.7     True        False         False      8h
+operator-lifecycle-manager-packageserver   4.5.7     True        False         False      4h1m
+service-ca                                 4.5.7     True        False         False      8h
+storage                                    4.5.7     True        False         False      3h54m
+
+</code></pre></div></div>
+
+<p>If you run into same issue:</p>
+<ul>
+  <li>Run command ‘oc get csr’ Check if all csr are Approved or Pending.</li>
+  <li>If Pending, you can approve them manually using following command.</li>
+  <li>
+    <table>
+      <tbody>
+        <tr>
+          <td>“oc get csr -o go-template=’\n’</td>
+          <td>xargs oc adm certificate approve”</td>
+        </tr>
+      </tbody>
+    </table>
+  </li>
+  <li>Please check the csr status few times, if new csr is created, you need to approve that as well.</li>
+  <li>Run command ‘oc get clusteroperator’ Check if AVAILABLE is true for all operators.</li>
+</ul>
+
+<hr />
+
+<h2 id="step-13--access-the-ocp-console">Step 13 : Access the OCP console</h2>
+
+<p>In previous step we ran following command.</p>
+<ul>
+  <li>‘openshift-install –dir=install01 wait-for install-complete –log-level=debug’</li>
+  <li>This should show you following message on successful install.</li>
+</ul>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+DEBUG Cluster is initialized                       
+INFO Waiting up to 10m0s for the openshift-console route to be created...
+DEBUG Route found in openshift-console namespace: console
+DEBUG Route found in openshift-console namespace: downloads
+DEBUG OpenShift console route is created           
+INFO Install complete!                            
+INFO To access the cluster as the system:admin user when using 'oc', run 'export KUBECONFIG=/root/OCPInstall3/install01/auth/kubeconfig'
+INFO Access the OpenShift web-console here: https://console-openshift-console.apps.mycluster.ibmgsi.com
+INFO Login to the console with user: "kubeadmin", and password: "xxxxx-xxxxx-xxxxx-xxxxx"
+INFO Time elapsed: 0s                 
+
+</code></pre></div></div>
+
+<p>If you own the Domain Name and you have updated the DNS records, as mentioned in Step # 3, you are good to connect to console or access any route. Else you may need to update /etc/hosts, on your client machine (e.g.mac) and add console route with external load balancer IP address.</p>
+
+<hr />
+
+<h2 id="resources">Resources</h2>
+<ul>
+  <li>Installation Document from RH</li>
+  <li>
+    <p>https://docs.openshift.com/container-platform/4.5/installing/installing_bare_metal/installing-bare-metal.html</p>
+  </li>
+  <li>Special Thanks for the following document. Most of content is reused from following two URLs. 
+https://github.com/IBMIntegration/IBM-CP4I-OpenShift-BareMetal-Native 
+https://www.openshift.com/blog/openshift-4-bare-metal-install-quickstart</li>
+</ul>
+
+<hr />
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
+      <a href="http://localhost:4000/cloudpaks/2020/04/03/introducing-lanyon/">
+        Introducing Lanyon
+      </a>
+    </h1>
+
+    <span class="post-date">03 Apr 2020</span>
+    <h4><a href="/cloudpaks/2020/04/03/introducing-lanyon/">CloudPaks</a></h4>
+    
+    <p>Lanyon is an unassuming <a href="http://jekyllrb.com">Jekyll</a> theme that places content first by tucking away navigation in a hidden drawer. It’s based on <a href="http://getpoole.com">Poole</a>, the Jekyll butler.</p>
+
+<h3 id="built-on-poole">Built on Poole</h3>
+
+<p>Poole is the Jekyll Butler, serving as an upstanding and effective foundation for Jekyll themes by <a href="https://twitter.com/mdo">@mdo</a>. Poole, and every theme built on it (like Lanyon here) includes the following:</p>
+
+<ul>
+  <li>Complete Jekyll setup included (layouts, config, <a href="/404">404</a>, <a href="/atom.xml">RSS feed</a>, posts, and <a href="/about">example page</a>)</li>
+  <li>Mobile friendly design and development</li>
+  <li>Easily scalable text and component sizing with <code class="language-plaintext highlighter-rouge">rem</code> units in the CSS</li>
+  <li>Support for a wide gamut of HTML elements</li>
+  <li>Related posts (time-based, because Jekyll) below each post</li>
+  <li>Syntax highlighting, courtesy Pygments (the Python-based code snippet highlighter)</li>
+</ul>
+
+<h3 id="lanyon-features">Lanyon features</h3>
+
+<p>In addition to the features of Poole, Lanyon adds the following:</p>
+
+<ul>
+  <li>Toggleable sliding sidebar (built with only CSS) via <strong>☰</strong> link in top corner</li>
+  <li>Sidebar includes support for textual modules and a dynamically generated navigation with active link support</li>
+  <li>Two orientations for content and sidebar, default (left sidebar) and <a href="https://github.com/poole/lanyon#reverse-layout">reverse</a> (right sidebar), available via <code class="language-plaintext highlighter-rouge">&lt;body&gt;</code> classes</li>
+  <li><a href="https://github.com/poole/lanyon#themes">Eight optional color schemes</a>, available via <code class="language-plaintext highlighter-rouge">&lt;body&gt;</code> classes</li>
+</ul>
+
+<p><a href="https://github.com/poole/lanyon#readme">Head to the readme</a> to learn more.</p>
+
+<h3 id="browser-support">Browser support</h3>
+
+<p>Lanyon is by preference a forward-thinking project. In addition to the latest versions of Chrome, Safari (mobile and desktop), and Firefox, it is only compatible with Internet Explorer 9 and above.</p>
+
+<h3 id="download">Download</h3>
+
+<p>Lanyon is developed on and hosted with GitHub. Head to the <a href="https://github.com/poole/lanyon">GitHub repository</a> for downloads, bug reports, and features requests.</p>
+
+<p>Thanks!</p>
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
+      <a href="http://localhost:4000/cp4automation/2020/04/02/example-content/">
+        Example content
+      </a>
+    </h1>
+
+    <span class="post-date">02 Apr 2020</span>
+    <h4><a href="/cp4automation/2020/04/02/example-content/">CP4Automation</a></h4>
+    
+    <div class="message">
+  Howdy! This is an example blog post that shows several types of HTML content supported in this theme.
+</div>
+
+<p>Cum sociis natoque penatibus et magnis <a href="#">dis parturient montes</a>, nascetur ridiculus mus. <em>Aenean eu leo quam.</em> Pellentesque ornare sem lacinia quam venenatis vestibulum. Sed posuere consectetur est at lobortis. Cras mattis consectetur purus sit amet fermentum.</p>
+
+<blockquote>
+  <p>Curabitur blandit tempus porttitor. Nullam quis risus eget urna mollis ornare vel eu leo. Nullam id dolor id nibh ultricies vehicula ut id elit.</p>
+</blockquote>
+
+<p>Etiam porta <strong>sem malesuada magna</strong> mollis euismod. Cras mattis consectetur purus sit amet fermentum. Aenean lacinia bibendum nulla sed consectetur.</p>
+
+<h2 id="inline-html-elements">Inline HTML elements</h2>
+
+<p>HTML defines a long list of available inline tags, a complete list of which can be found on the <a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Element">Mozilla Developer Network</a>.</p>
+
+<ul>
+  <li><strong>To bold text</strong>, use <code class="language-plaintext highlighter-rouge">&lt;strong&gt;</code>.</li>
+  <li><em>To italicize text</em>, use <code class="language-plaintext highlighter-rouge">&lt;em&gt;</code>.</li>
+  <li>Abbreviations, like <abbr title="HyperText Markup Langage">HTML</abbr> should use <code class="language-plaintext highlighter-rouge">&lt;abbr&gt;</code>, with an optional <code class="language-plaintext highlighter-rouge">title</code> attribute for the full phrase.</li>
+  <li>Citations, like <cite>— Mark otto</cite>, should use <code class="language-plaintext highlighter-rouge">&lt;cite&gt;</code>.</li>
+  <li><del>Deleted</del> text should use <code class="language-plaintext highlighter-rouge">&lt;del&gt;</code> and <ins>inserted</ins> text should use <code class="language-plaintext highlighter-rouge">&lt;ins&gt;</code>.</li>
+  <li>Superscript <sup>text</sup> uses <code class="language-plaintext highlighter-rouge">&lt;sup&gt;</code> and subscript <sub>text</sub> uses <code class="language-plaintext highlighter-rouge">&lt;sub&gt;</code>.</li>
+</ul>
+
+<p>Most of these elements are styled by browsers with few modifications on our part.</p>
+
+<h2 id="heading">Heading</h2>
+
+<p>Vivamus sagittis lacus vel augue rutrum faucibus dolor auctor. Duis mollis, est non commodo luctus, nisi erat porttitor ligula, eget lacinia odio sem nec elit. Morbi leo risus, porta ac consectetur ac, vestibulum at eros.</p>
+
+<h3 id="code">Code</h3>
+
+<p>Cum sociis natoque penatibus et magnis dis <code class="language-plaintext highlighter-rouge">code element</code> montes, nascetur ridiculus mus.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="c1">// Example can be run directly in your JavaScript console
+</span>
+
+<span class="c1">// Create a function that takes two arguments and returns the sum of those arguments
+</span>
+<span class="kd">var</span> <span class="nx">adder</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Function</span><span class="p">(</span><span class="dl">"</span><span class="s2">a</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">b</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">return a + b</span><span class="dl">"</span><span class="p">);</span>
+
+<span class="c1">// Call the function
+</span>
+<span class="nx">adder</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">6</span><span class="p">);</span>
+<span class="c1">// &gt; 8</span></code></pre></figure>
+
+<p>Aenean lacinia bibendum nulla sed consectetur. Etiam porta sem malesuada magna mollis euismod. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa.</p>
+
+<h3 id="lists">Lists</h3>
+
+<p>Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Aenean lacinia bibendum nulla sed consectetur. Etiam porta sem malesuada magna mollis euismod. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus.</p>
+
+<ul>
+  <li>Praesent commodo cursus magna, vel scelerisque nisl consectetur et.</li>
+  <li>Donec id elit non mi porta gravida at eget metus.</li>
+  <li>Nulla vitae elit libero, a pharetra augue.</li>
+</ul>
+
+<p>Donec ullamcorper nulla non metus auctor fringilla. Nulla vitae elit libero, a pharetra augue.</p>
+
+<ol>
+  <li>Vestibulum id ligula porta felis euismod semper.</li>
+  <li>Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.</li>
+  <li>Maecenas sed diam eget risus varius blandit sit amet non magna.</li>
+</ol>
+
+<p>Cras mattis consectetur purus sit amet fermentum. Sed posuere consectetur est at lobortis.</p>
+
+<dl>
+  <dt>HyperText Markup Language (HTML)</dt>
+  <dd>The language used to describe and define the content of a Web page</dd>
+
+  <dt>Cascading Style Sheets (CSS)</dt>
+  <dd>Used to describe the appearance of Web content</dd>
+
+  <dt>JavaScript (JS)</dt>
+  <dd>The programming language used to build advanced Web sites and applications</dd>
+</dl>
+
+<p>Integer posuere erat a ante venenatis dapibus posuere velit aliquet. Morbi leo risus, porta ac consectetur ac, vestibulum at eros. Nullam quis risus eget urna mollis ornare vel eu leo.</p>
+
+<h3 id="tables">Tables</h3>
+
+<p>Aenean lacinia bibendum nulla sed consectetur. Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Upvotes</th>
+      <th>Downvotes</th>
+    </tr>
+  </thead>
+  <tfoot>
+    <tr>
+      <td>Totals</td>
+      <td>21</td>
+      <td>23</td>
+    </tr>
+  </tfoot>
+  <tbody>
+    <tr>
+      <td>Alice</td>
+      <td>10</td>
+      <td>11</td>
+    </tr>
+    <tr>
+      <td>Bob</td>
+      <td>4</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <td>Charlie</td>
+      <td>7</td>
+      <td>9</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Nullam id dolor id nibh ultricies vehicula ut id elit. Sed posuere consectetur est at lobortis. Nullam quis risus eget urna mollis ornare vel eu leo.</p>
+
+<hr />
+
+<p>Want to see something else added? <a href="https://github.com/poole/poole/issues/new">Open an issue.</a></p>
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
+      <a href="http://localhost:4000/cloud/2020/04/01/whats-jekyll/">
+        What's Jekyll?
+      </a>
+    </h1>
+
+    <span class="post-date">01 Apr 2020</span>
+    <h4><a href="/cloud/2020/04/01/whats-jekyll/">Cloud</a></h4>
+    
+    <p><a href="https://jekyllrb.com">Jekyll</a> is a static site generator, an open-source tool for creating simple yet powerful websites of all shapes and sizes. From <a href="https://github.com/mojombo/jekyll/blob/master/README.markdown">the project’s readme</a>:</p>
+
+<blockquote>
+  <p>Jekyll is a simple, blog aware, static site generator. It takes a template directory […] and spits out a complete, static website suitable for serving with Apache or your favorite web server. This is also the engine behind GitHub Pages, which you can use to host your project’s page or blog right here from GitHub.</p>
+</blockquote>
+
+<p>It’s an immensely useful tool and one we encourage you to use here with Lanyon.</p>
+
+<p>Find out more by <a href="https://github.com/mojombo/jekyll">visiting the project on GitHub</a>.</p>
+
+  </div>
+  
+</div>
+
+
+<div class="pagination">
+  
+    <span class="pagination-item older">Older</span>
+  
+  
+    <span class="pagination-item newer">Newer</span>
+  
+</div>
+
+      </div>
+    </div>
+
+    <label for="sidebar-checkbox" class="sidebar-toggle"></label>
+
+    <script src='/public/js/script.js'></script>
+  </body>
+</html>

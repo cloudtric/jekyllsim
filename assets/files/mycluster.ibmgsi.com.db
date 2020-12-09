@@ -1,0 +1,29 @@
+@ IN SOA ns1.softlayer.com. root.mycluster.ibmgsi.com. (
+                       2020030800        ; Serial
+                       7200              ; Refresh
+                       600               ; Retry
+                       1728000           ; Expire
+                       3600)             ; Minimum
+
+@                      86400    IN NS    ns1.softlayer.com.
+@                      86400    IN NS    ns2.softlayer.com.
+
+*.apps                 900      IN A     10.209.85.233
+*.apps                 900      IN A     10.209.85.233
+api                    900      IN A     10.209.85.194
+api                    900      IN A     10.209.85.194
+api-int                900      IN A     10.209.85.194
+api-int                900      IN A     10.209.85.194
+etcd-0                 900      IN A     10.209.85.242
+etcd-1                 900      IN A     10.209.85.202
+etcd-2                 900      IN A     10.209.85.236
+baremetal              900      IN A     10.209.85.219
+baremetal2             900      IN A     10.209.85.242
+baremetal3             900      IN A     10.209.85.202
+baremetal4             900      IN A     10.209.85.236
+baremetal5             900      IN A     10.209.85.211
+baremetal6             900      IN A     10.209.85.218
+baremetal7             900      IN A     10.209.85.224
+_etcd-server-ssl._tcp  900      IN SRV   0 10 2380 etcd-0
+_etcd-server-ssl._tcp  900      IN SRV   0 10 2380 etcd-1
+_etcd-server-ssl._tcp  900      IN SRV   0 10 2380 etcd-2
