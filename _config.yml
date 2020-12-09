@@ -1,0 +1,22 @@
+# Setup
+title:               Cloud Hacks
+tagline:             'A cloud centric blog to share ideas, concepts and code'
+description:         ''
+url:                 
+baseurl:             ''
+paginate:            5
+permalink:           pretty
+
+# About/contact
+author:
+  name:              Vishal C/Vijay TS
+  url:               
+  email:             cloudtric23@gmail.com
+
+# Gems
+plugins:
+  - jekyll-paginate
+
+# Custom vars
+version:             1.1.0
+google_analytics_id: G-JD8T69VZ7Z
